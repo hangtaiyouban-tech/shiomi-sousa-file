@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>捜査端末 Case 0｜灯台通りの古書店（体験版）</title>
+  <meta name="description" content="証拠品と捜査端末で事件を解く、推理ゲームの体験版。">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="badge">潮見署 捜査端末</span>
+      <span class="case-title" id="caseTitle"></span>
+    </div>
+    <div class="status" id="status" aria-live="polite"></div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="捜査メニュー" id="tabs"></nav>
+
+  <main id="main" tabindex="-1"></main>
+
+  <footer class="foot">
+    <p id="disclaimer"></p>
+    <p><a href="print.html" target="_blank" rel="noopener">証拠品を印刷する（A4）</a>　／　<a href="downloads/case0-evidence.pdf" download>証拠品PDFをダウンロード</a></p>
+  </footer>
+
+  <script src="data/case0.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>潮見署 捜査ファイル</title>
+  <meta name="description" content="紙の証拠品とスマホの捜査端末で真犯人を突き止める、日本が舞台のオリジナル推理ゲーム。体験版を無料公開中。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+  <style>
+    /* レイアウト：捜査資料の綴じ込み。左に索引ラベル、右に資料本文。スマホでは1列 */
+    :root {
+      --paper: #f3ecdc;      /* 捜査ファイルの用紙 */
+      --folder: #d9c49a;     /* マニラフォルダ */
+      --ink: #1d2126;        /* 本文インク */
+      --ink-soft: #545a62;
+      --stamp: #b3261e;      /* 朱肉 */
+      --rule: #c9bb9c;
+      --surface: #fbf7ee;
+      --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+      --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+      --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #17191c; --folder: #3a3326; --ink: #ebe4d4; --ink-soft: #a9a294;
+        --stamp: #ef6b5f; --rule: #3b3d40; --surface: #202327; color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --paper: #17191c; --folder: #3a3326; --ink: #ebe4d4; --ink-soft: #a9a294;
+      --stamp: #ef6b5f; --rule: #3b3d40; --surface: #202327; color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--paper); color: var(--ink);
+      font-family: var(--font-body); font-size: 16px; line-height: 1.85;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--stamp); outline-offset: 3px; }
+    .wrap { max-width: 1040px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+    /* ヒーロー */
+    .hero { padding-block: 56px 48px; border-bottom: 1px solid var(--rule); }
+    .file-no { font-family: var(--font-data); font-size: 13px; letter-spacing: .08em; color: var(--ink-soft); }
+    .hero h1 {
+      font-family: var(--font-display); font-weight: 800;
+      font-size: clamp(34px, 7vw, 64px); line-height: 1.25; margin: 12px 0 16px; text-wrap: balance;
+    }
+    .hero .lead { font-size: clamp(16px, 2.2vw, 19px); max-width: 34em; margin: 0 0 28px; }
+    .stamp {
+      display: inline-block; font-family: var(--font-display); font-weight: 800; color: var(--stamp);
+      border: 3px double var(--stamp); padding: 2px 12px; transform: rotate(-3deg); letter-spacing: .1em;
+    }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; min-height: 48px;
+      padding: 0 22px; border-radius: 4px; font: 700 16px var(--font-body); text-decoration: none; cursor: pointer;
+    }
+    .btn.primary { background: var(--ink); color: var(--paper); }
+    .btn.ghost { border: 2px solid var(--ink); color: var(--ink); background: transparent; }
+    .btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+
+    /* 綴じ込みセクション */
+    .sheet { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; padding-block: 48px; border-bottom: 1px solid var(--rule); }
+    .tab-label {
+      align-self: start; font-family: var(--font-data); font-size: 13px; letter-spacing: .08em;
+      background: var(--folder); color: var(--ink); padding: 6px 12px; border-radius: 4px 4px 0 0;
+    }
+    .sheet h2 { font-family: var(--font-display); font-size: clamp(24px, 3.6vw, 32px); line-height: 1.4; margin: 0 0 16px; text-wrap: balance; }
+    .sheet p { max-width: 38em; margin: 0 0 12px; }
+    .muted { color: var(--ink-soft); }
+
+    .steps { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); counter-reset: s; }
+    .steps li { counter-increment: s; border-top: 2px solid var(--ink); padding-top: 12px; }
+    .steps li::before { content: "手順 " counter(s); display: block; font-family: var(--font-data); font-size: 13px; color: var(--stamp); letter-spacing: .06em; }
+    .steps strong { display: block; font-size: 18px; }
+
+    .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin: 8px 0 0; }
+    .facts div { border-bottom: 1px dashed var(--rule); padding: 12px 0; }
+    .facts dt { font-weight: 700; }
+    .facts dd { margin: 0; color: var(--ink-soft); }
+
+    .record { background: var(--surface); border: 1px solid var(--rule); padding: 20px; max-width: 40em; }
+    .record table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .record th, .record td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+    .record td:first-child { font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .record caption { text-align: left; font-family: var(--font-data); font-size: 13px; color: var(--ink-soft); padding-bottom: 8px; }
+    .table-wrap { overflow-x: auto; }
+
+    details { border-bottom: 1px solid var(--rule); padding: 12px 0; max-width: 40em; }
+    summary { cursor: pointer; font-weight: 700; }
+    details p { margin: 8px 0 0; }
+
+    footer { padding-block: 32px 48px; font-size: 13px; color: var(--ink-soft); }
+    footer p { margin: 0 0 6px; }
+
+    @media (max-width: 720px) {
+      .sheet { grid-template-columns: minmax(0, 1fr); gap: 12px; padding-block: 36px; }
+      .tab-label { justify-self: start; }
+      .steps, .facts { grid-template-columns: minmax(0, 1fr); }
+      .btn { width: 100%; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .stamp { animation: press .5s ease-out .2s both; }
+      @keyframes press { from { transform: rotate(-3deg) scale(1.4); opacity: 0; } to { transform: rotate(-3deg) scale(1); opacity: 1; } }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="file-no">潮見警察署 刑事課　捜査ファイル</p>
+      <span class="stamp">捜査協力依頼</span>
+      <h1>あなたの机に、<br>事件が届く。</h1>
+      <p class="lead">紙の証拠品を読み、スマホの「捜査端末」で記録を照会して、真犯人を突き止める。日本が舞台の、オリジナル推理ゲームです。</p>
+      <div class="cta">
+        <a class="btn primary" href="play/" id="ctaPlay">体験版を遊ぶ（無料・約30〜45分）</a>
+        <a class="btn ghost" id="ctaSignup" href="#signup">発売のお知らせを受け取る</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="wrap sheet" aria-labelledby="how">
+      <div class="tab-label">資料 01｜遊び方</div>
+      <div>
+        <h2 id="how">刑事の仕事を、そのまま机の上で。</h2>
+        <p>答えは画面に書いてありません。資料どうしを突き合わせ、証言のウソを自分で見つけます。</p>
+        <ol class="steps">
+          <li><strong>証拠品を読む</strong>検案書、見取り図、電子錠のログ。紙でも画面でも読めます。</li>
+          <li><strong>端末で照会する</strong>防犯カメラの通過記録、通話記録、関係者の投稿を検索します。</li>
+          <li><strong>推理を提出する</strong>犯人と根拠を選んで提出。正解すると解説が読めます。</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="wrap sheet" aria-labelledby="sample">
+      <div class="tab-label">資料 02｜端末の記録</div>
+      <div>
+        <h2 id="sample">たとえば、この記録から何がわかるか。</h2>
+        <p>体験版「Case 0」の防犯カメラ記録の一部です。</p>
+        <div class="record">
+          <div class="table-wrap">
+            <table>
+              <caption>灯台通り商店街　防犯カメラ通過記録　10月13日（抜粋）</caption>
+              <thead><tr><th scope="col">時刻</th><th scope="col">カメラ</th><th scope="col">照合結果</th></tr></thead>
+              <tbody>
+                <tr><td>19:12</td><td>北口 A　商店街に入る</td><td>桐生 隆文</td></tr>
+                <tr><td>19:52</td><td>北口 A　商店街から出る</td><td>桐生 隆文</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="muted">桐生さんは「19時50分ごろ店を出て、まっすぐ帰った」と証言しています。記録とは合っています。では、ほかの人の証言はどうでしょうか。</p>
+      </div>
+    </section>
+
+    <section class="wrap sheet" aria-labelledby="features">
+      <div class="tab-label">資料 03｜特徴</div>
+      <div>
+        <h2 id="features">一つの真相に、たどり着けるように。</h2>
+        <dl class="facts">
+          <div><dt>日本が舞台の完全オリジナル</dt><dd>翻訳ではなく、日本の町と日本語の資料で作っています。</dd></div>
+          <div><dt>1人でも、みんなでも</dt><dd>1人で集中しても、2〜4人で相談しながらでも遊べます。</dd></div>
+          <div><dt>矛盾がないことを機械で確認</dt><dd>人物の移動と記録を1分単位で検証し、犯人が一人に決まることを確かめています。</dd></div>
+          <div><dt>ヒントは3段階</dt><dd>行き詰まったら少しずつ。使わずに解くと評価が上がります。</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="wrap sheet" aria-labelledby="signup">
+      <div class="tab-label">資料 04｜製品版</div>
+      <div>
+        <h2 id="signup">製品版は、クラウドファンディングで準備中です。</h2>
+        <p>新しい事件（想定プレイ時間60〜90分）を、デジタル版と印刷版で計画しています。内容・価格・時期は確定していません。決まり次第お知らせします。</p>
+        <p><a class="btn primary" id="signupLink" aria-disabled="true" role="link">お知らせ登録フォーム（準備中）</a></p>
+        <p class="muted">登録いただいたメールアドレスは、発売とクラウドファンディング開始のお知らせにだけ使います。</p>
+      </div>
+    </section>
+
+    <section class="wrap sheet" aria-labelledby="faq">
+      <div class="tab-label">資料 05｜質問</div>
+      <div>
+        <h2 id="faq">よくある質問</h2>
+        <details><summary>スマホだけで遊べますか？</summary><p>はい。証拠品はすべて端末の中でも読めます。印刷は好みでどうぞ。</p></details>
+        <details><summary>アプリのインストールや会員登録は必要ですか？</summary><p>不要です。ブラウザで開くだけで遊べます。進み具合はお使いの端末の中にだけ保存されます。</p></details>
+        <details><summary>怖い描写はありますか？</summary><p>事件は扱いますが、残酷な描写はしていません。</p></details>
+        <details><summary>制作にAIを使っていますか？</summary><p>はい。シナリオの文章とプログラムの制作にAIを使い、矛盾の検証を自動テストで行っています。公開前に、人によるテストプレイでも確認します。</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <p>この作品はフィクションです。登場する人物・団体・地名はすべて架空です。</p>
+    <p>運営：潮見署 捜査ファイル 制作室</p>
+  </footer>
+  <script>
+    // アンケート／登録フォームのURLが決まったらここに設定する
+    window.SIGNUP_URL = "";
+    (function () {
+      var a = document.getElementById("signupLink");
+      if (window.SIGNUP_URL) {
+        a.href = window.SIGNUP_URL; a.target = "_blank"; a.rel = "noopener";
+        a.removeAttribute("aria-disabled"); a.removeAttribute("role");
+        a.textContent = "お知らせ登録フォームを開く";
+      }
+    })();
+  </script>
+</body>
+</html>
