@@ -1,7 +1,18 @@
-/* 捜査端末 — 体験版。外部通信なし。進行状況はこのブラウザ内にのみ保存。 */
+/* 捜査端末。外部通信なし。進行状況はこのブラウザ内にのみ保存。
+ * 読み込んだ事件データ（window.CASE_DATA、なければ体験版 window.CASE0）で動く。 */
 (function () {
   "use strict";
-  const D = window.CASE0;
+  const D = applyNames(window.CASE_DATA || window.CASE0);
+
+  /* 名前の差し込み枠 {{NAME_n}} を、確定した名前（window.NAME_VALUES）か仮の名前で置き換える */
+  function applyNames(data) {
+    const slots = data.nameSlots || {};
+    const values = window.NAME_VALUES || {};
+    const pick = (k) => values[k] || (slots[k] && slots[k].placeholder) || k;
+    const walk = (v) => typeof v === "string" ? v.replace(/\{\{(NAME_\d+)\}\}/g, (_, k) => pick(k))
+      : Array.isArray(v) ? v.map(walk) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)])) : v;
+    return walk(data);
+  }
   const STORE_KEY = "sousa-terminal:" + D.id;
 
   /* ---------- 保存（使えない環境でも動くよう try/catch） ---------- */
@@ -42,22 +53,26 @@
   }
 
   /* ---------- 画面 ---------- */
+  const wifiRows = D.wifiRecord ? D.records.find((r) => r.id === D.wifiRecord).rows : null;
   const VIEWS = [
     ["brief", "事件概要"],
     ["evidence", "証拠品"],
-    ["camera", "防犯カメラ"],
+    D.cameraLog ? ["camera", "防犯カメラ"] : null,
+    wifiRows ? ["wifi", "Wi-Fi記録"] : null,
     ["records", "記録照会"],
     ["interviews", "聞き込み"],
-    ["sns", "ツブヤキ"],
+    D.chat ? ["chat", "グループチャット"] : null,
+    D.sns ? ["sns", "ツブヤキ"] : null,
     ["notes", "捜査メモ"],
     ["hints", "ヒント"],
     ["answer", "解答提出"],
-  ];
+  ].filter(Boolean);
 
   const render = {
     brief() {
       return [
         h("h1", {}, D.title),
+        h("p", { class: "case-date", id: "caseDate" }, "事件発生日：" + dateLabel(D.date) + (D.dateNote ? "　" + D.dateNote : "")),
         h("p", { class: "muted" }, D.subtitle),
         h("div", { class: "card" }, D.briefing.map((p) => h("p", {}, p))),
         h("h2", {}, "関係者"),
@@ -123,7 +138,43 @@
         h("button", { class: "btn", type: "submit" }, "検索"));
       setTimeout(run, 0);
       return [h("h1", {}, "防犯カメラ記録の検索"),
-        h("p", { class: "muted" }, "10月13日 6:00〜23:59 の通過記録（顔照合済み）"), form, out];
+        h("p", { class: "muted" }, D.cameraCaption || ""), form, out];
+    },
+
+    wifi() {
+      const devices = [...new Set(wifiRows.map((r) => r[1]))];
+      const aps = [...new Set(wifiRows.map((r) => r[2]))];
+      const devSel = h("select", { id: "wifiDev" }, h("option", { value: "" }, "すべて"), devices.map((d) => h("option", { value: d }, d)));
+      const apSel = h("select", { id: "wifiAp" }, h("option", { value: "" }, "すべて"), aps.map((a) => h("option", { value: a }, a)));
+      const from = h("input", { type: "time", value: D.timeline.start, id: "wifiFrom" });
+      const to = h("input", { type: "time", value: D.timeline.end, id: "wifiTo" });
+      const out = h("div", { id: "wifiResult" });
+      const rec = D.records.find((r) => r.id === D.wifiRecord);
+      function run(ev) {
+        if (ev) ev.preventDefault();
+        markViewed(D.wifiRecord);
+        const f = toMin(from.value || "00:00"), t = toMin(to.value || "23:59");
+        const rows = wifiRows.filter((r) => (!devSel.value || r[1] === devSel.value) && (!apSel.value || r[2] === apSel.value) && toMin(r[0]) >= f && toMin(r[0]) <= t);
+        out.replaceChildren(h("p", { class: "muted" }, `${rows.length} 件`),
+          rows.length ? table(rec.columns, rows, { id: "wifiTable" }) : h("p", {}, "該当する記録はありません。"),
+          rec.note ? h("p", { class: "muted" }, "※ " + rec.note) : null);
+      }
+      setTimeout(run, 0);
+      return [h("h1", {}, "Wi-Fi接続記録の検索"), h("p", { class: "muted" }, rec.title),
+        h("form", { class: "search", onsubmit: run },
+          h("label", {}, "端末", devSel), h("label", {}, "接続先", apSel),
+          h("label", {}, "開始", from), h("label", {}, "終了", to),
+          h("button", { class: "btn", type: "submit" }, "検索")), out];
+    },
+
+    chat() {
+      markViewed("chat");
+      return [h("h1", {}, D.chatTitle || "グループチャット"),
+        h("p", { class: "muted" }, "住人の同意を得て提出されたトーク履歴です。"),
+        h("div", { class: "card", id: "chatLog" }, D.chat.map((m) =>
+          h("article", { class: "post" },
+            h("div", { class: "meta" }, `${name(m.who)}・${m.t}`),
+            h("p", {}, m.text))))];
     },
 
     records() {
@@ -204,7 +255,7 @@
       form.addEventListener("submit", (ev) => {
         ev.preventDefault();
         const fd = new FormData(form);
-        const ans = { Q1: fd.get("Q1"), Q2: fd.get("Q2"), Q3: fd.getAll("Q3") };
+        const ans = Object.fromEntries(D.questions.map((q) => [q.id, q.type === "multi" ? fd.getAll(q.id) : fd.get(q.id)]));
         loadSolution().then((sol) => {
           state.attempts += 1;
           const r = grade(ans, sol, state.hintsUsed);
@@ -217,6 +268,14 @@
       return [h("h1", {}, "解答提出"), h("p", { class: "muted" }, "不正解でも何度でも提出できます。"), form, out];
     },
   };
+
+  /* 「2026年10月13日（火）」の形にする（曜日は日付から計算） */
+  function dateLabel(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    const w = "日月火水木金土"[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    return `${y}年${m}月${d}日（${w}）`;
+  }
+  window.__dateLabel = dateLabel;
 
   /* ---------- やり直し ---------- */
   function hasProgress() {
@@ -238,24 +297,26 @@
 
   /* ---------- 採点 ---------- */
   function grade(ans, sol, hintsUsed) {
-    const q1 = ans.Q1 === sol.answers.Q1;
-    const q2 = ans.Q2 === sol.answers.Q2;
-    const want = [...sol.answers.Q3].sort().join(",");
-    const q3 = [...ans.Q3].sort().join(",") === want;
+    const same = (a, b) => [].concat(a || []).sort().join(",") === [].concat(b).sort().join(",");
+    const marks = D.questions.map((q) => ({ id: q.id, short: q.short || q.id, bonus: !!q.bonus, ok: same(ans[q.id], sol.answers[q.id]) }));
+    const q1 = marks[0].ok;
+    const mainOk = marks.filter((m) => !m.bonus).every((m) => m.ok);
     let rank = null;
-    if (q1 && q2 && q3) rank = hintsUsed === 0 ? "S" : hintsUsed === 1 ? "A" : "B";
+    if (mainOk) rank = hintsUsed === 0 ? "S" : hintsUsed === 1 ? "A" : "B";
     else if (q1) rank = "C";
-    return { solved: q1, q1, q2, q3, rank, hintsUsed };
+    const bonus = marks.some((m) => m.bonus && m.ok);
+    return { solved: q1, marks, rank, bonus, hintsUsed };
   }
 
   let solutionPromise = null;
   function loadSolution() {
-    if (window.CASE0_SOLUTION) return Promise.resolve(window.CASE0_SOLUTION);
+    const key = D.id.toUpperCase() + "_SOLUTION";
+    if (window[key]) return Promise.resolve(window[key]);
     if (!solutionPromise) {
       solutionPromise = new Promise((resolve, reject) => {
         const sc = document.createElement("script");
-        sc.src = "data/case0-solution.js";
-        sc.onload = () => resolve(window.CASE0_SOLUTION);
+        sc.src = `data/${D.id}-solution.js`;
+        sc.onload = () => resolve(window[key]);
         sc.onerror = () => { solutionPromise = null; reject(new Error("load failed")); };
         document.head.append(sc);
       });
@@ -279,15 +340,15 @@
     out.replaceChildren(h("div", { class: "result ok", id: "verdict" },
       h("p", { class: "rank" }, `事件解決　ランク ${r.rank}`),
       h("ul", {},
-        h("li", {}, `犯人：${mark(r.q1)}`),
-        h("li", {}, `侵入経路：${mark(r.q2)}`),
-        h("li", {}, `ウソを示す記録：${mark(r.q3)}`),
-        h("li", {}, `使ったヒント：${r.hintsUsed}個`))),
+        r.marks.map((m) => h("li", {}, `${m.bonus ? "（追加問題）" : ""}${m.short}：${mark(m.ok)}`)),
+        h("li", {}, `使ったヒント：${r.hintsUsed}個`)),
+      r.bonus ? h("p", { id: "bonus" }, "追加問題も正解。名探偵です。") : null),
       h("div", { class: "card" }, h("h2", {}, "解説"), sol.explanation.map((t) => h("p", {}, t))),
-      h("div", { class: "card" }, h("h2", {}, "体験版はここまでです"),
+      D.trial ? h("div", { class: "card" }, h("h2", {}, "体験版はここまでです"),
         h("p", {}, "遊んでいただきありがとうございました。感想をお聞かせいただけると、製品版の制作に役立ちます。"),
         surveyLink(),
-        window.SIGNUP_URL ? h("p", {}, h("a", { class: "btn secondary", href: window.SIGNUP_URL, target: "_blank", rel: "noopener", id: "signupLink" }, "製品版の発売のお知らせを受け取る")) : null));
+        window.SIGNUP_URL ? h("p", {}, h("a", { class: "btn secondary", href: window.SIGNUP_URL, target: "_blank", rel: "noopener", id: "signupLink" }, "製品版の発売のお知らせを受け取る")) : null)
+        : h("div", { class: "card" }, h("h2", {}, "捜査完了"), h("p", {}, D.endText || "ご協力ありがとうございました。")));
   }
 
   function surveyLink() {
@@ -298,8 +359,8 @@
 
   /* ---------- 見取り図（map.js） ---------- */
   function mapSvg() {
-    return h("div", { class: "map" }, window.buildMapSvg(),
-      h("p", { class: "muted" }, "●黄＝防犯カメラ　●青＝出入口（表通り側はシャッター／前扉）"));
+    const svg = window.buildMapSvg(D.id);
+    return svg ? h("div", { class: "map" }, svg, h("p", { class: "muted" }, D.mapLegend || "")) : null;
   }
 
   /* ---------- ナビゲーション ---------- */

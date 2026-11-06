@@ -44,7 +44,9 @@
       // 表紙
       const cover = el("section"); cover.className = "sheet";
       const st = el("span", "捜査資料・持出注意"); st.className = "stamp";
-      cover.append(st, el("h1", D.title), el("p", D.subtitle));
+      const [yy, mm, dd] = D.date.split("-").map(Number);
+      const wd = "日月火水木金土"[new Date(Date.UTC(yy, mm - 1, dd)).getUTCDay()];
+      cover.append(st, el("h1", D.title), el("p", `事件発生日：${yy}年${mm}月${dd}日（${wd}）`), el("p", D.subtitle));
       D.briefing.forEach((p) => cover.append(el("p", p)));
       cover.append(el("h2", "関係者一覧"));
       const t = el("table"); const head = el("tr");

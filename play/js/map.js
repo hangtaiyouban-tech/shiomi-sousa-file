@@ -8,7 +8,11 @@
     if (text) el.textContent = text;
     return el;
   }
-  window.buildMapSvg = function () {
+  window.svgEl = s;
+  window.caseMaps = window.caseMaps || {};
+  window.buildMapSvg = function (caseId) {
+    if (window.caseMaps[caseId]) return window.caseMaps[caseId]();
+    if (caseId && caseId !== "case0") return null; // 専用の図がない事件では、別の事件の図を出さない
     const svg = s("svg", { viewBox: "0 0 640 360", role: "img", "aria-labelledby": "mapTitle mapDesc" });
     svg.append(s("title", { id: "mapTitle" }, "現場見取り図"),
       s("desc", { id: "mapDesc" }, "表通りの南側に灯台堂とミナト珈琲が並び、その裏に共用裏庭がある。裏庭の門は裏通りに面し、裏通りは東端の通路（カメラB）だけで表通りとつながる。"));
