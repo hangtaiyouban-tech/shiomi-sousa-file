@@ -286,7 +286,8 @@
       h("div", { class: "card" }, h("h2", {}, "解説"), sol.explanation.map((t) => h("p", {}, t))),
       h("div", { class: "card" }, h("h2", {}, "体験版はここまでです"),
         h("p", {}, "遊んでいただきありがとうございました。感想をお聞かせいただけると、製品版の制作に役立ちます。"),
-        surveyLink()));
+        surveyLink(),
+        window.SIGNUP_URL ? h("p", {}, h("a", { class: "btn secondary", href: window.SIGNUP_URL, target: "_blank", rel: "noopener", id: "signupLink" }, "製品版の発売のお知らせを受け取る")) : null));
   }
 
   function surveyLink() {
